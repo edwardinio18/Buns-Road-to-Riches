@@ -11,12 +11,45 @@ export class Game extends Scene {
     const background = this.add.image(width / 2, height / 2, "background");
     background.setDisplaySize(width, height);
 
-    this.bun = this.physics.add.sprite(width / 2, height - 100, "bun");
-    this.bun.setCollideWorldBounds(true);
-    this.bun.setScale(0.5);
-    this.bun.setCircle(this.bun.width / 2);
+    this.bun_1 = this.physics.add.sprite(
+      this.scale.width / 2,
+      this.scale.height - 100,
+      "bun",
+    );
+    this.bun_1.setCollideWorldBounds(true);
+    this.bun_1.setScale(0.5);
+    this.bun_1.setCircle(this.bun_1.width / 2);
+    this.bun_1.setTint(0x777777);
+    this.bun_1.playerId = 1;
+    this.score_1 = 0;
+
+    this.bun_2 = this.physics.add.sprite(
+      this.scale.width / 4,
+      this.scale.height - 100,
+      "bun",
+    );
+    this.bun_2.setCollideWorldBounds(true);
+    this.bun_2.setScale(0.5);
+    this.bun_2.setCircle(this.bun_2.width / 2);
+    this.bun_2.setTint(0xe3569d);
+    this.bun_2.playerId = 2;
+    this.score_2 = 0;
+
+    if (this.game.registry.get("highScore_1") === undefined) {
+      this.game.registry.set("highScore_1", 0);
+    }
+    if (this.game.registry.get("highScore_2") === undefined) {
+      this.game.registry.set("highScore_2", 0);
+    }
 
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    this.wasd = {
+      up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+    };
 
     this.ground = this.physics.add.staticGroup();
     const groundHeight = height - 20;
@@ -38,13 +71,8 @@ export class Game extends Scene {
       this,
     );
 
-    this.physics.add.overlap(
-      this.bun,
-      this.coins,
-      this.collectCoin,
-      null,
-      this,
-    );
+    this.intersectCoin(this.bun_1);
+    this.intersectCoin(this.bun_2);
 
     this.bombs = this.physics.add.group();
     this.spawnBombs();
@@ -57,35 +85,32 @@ export class Game extends Scene {
       this,
     );
 
-    this.physics.add.collider(this.bun, this.bombs, this.hitBomb, null, this);
+    this.intersectBomb(this.bun_1);
+    this.intersectBomb(this.bun_2);
 
-    this.score = 0;
-    this.scoreText = this.add.text(16, 16, "Score: 0", {
+    this.scoreText_1 = this.add.text(16, 16, "Player 1: 0", {
       fontSize: "32px",
       fill: "#ffffff",
+      backgroundColor: "#000000",
+      padding: 10,
     });
+
+    this.scoreText_2 = this.add.text(
+      16,
+      this.scoreText_1.height + 32,
+      "Player 2: 0",
+      {
+        fontSize: "32px",
+        fill: "#ffffff",
+        backgroundColor: "#000000",
+        padding: 10,
+      },
+    );
   }
 
   update() {
-    const onGround = this.physics.overlap(this.bun, this.ground);
-
-    if (this.cursors.left.isDown) {
-      this.bun.setVelocityX(-1000);
-    } else if (this.cursors.right.isDown) {
-      this.bun.setVelocityX(1000);
-    } else {
-      this.bun.setVelocityX(0);
-    }
-
-    if (this.cursors.up.isDown && onGround) {
-      this.bun.setVelocityY(-1000);
-    } else if (!onGround) {
-      this.bun.setVelocityY(this.bun.body.velocity.y + 30);
-    }
-
-    if (this.cursors.down.isDown && !onGround) {
-      this.bun.setVelocityY(this.bun.body.velocity.y + 100);
-    }
+    this.handlePlayerMovement(this.bun_1, this.cursors);
+    this.handlePlayerMovement(this.bun_2, this.wasd);
 
     this.checkForCoinRespawn();
 
@@ -102,10 +127,37 @@ export class Game extends Scene {
     });
   }
 
-  collectCoin(bun, coin) {
+  handlePlayerMovement(player, controls) {
+    const onGround = this.physics.overlap(player, this.ground);
+
+    if (controls.left.isDown) {
+      player.setVelocityX(-1000);
+    } else if (controls.right.isDown) {
+      player.setVelocityX(1000);
+    } else {
+      player.setVelocityX(0);
+    }
+
+    if (controls.up.isDown && onGround) {
+      player.setVelocityY(-1000);
+    } else if (!onGround) {
+      player.setVelocityY(player.body.velocity.y + 30);
+    }
+
+    if (controls.down.isDown && !onGround) {
+      player.setVelocityY(player.body.velocity.y + 100);
+    }
+  }
+
+  collectCoin(player, coin) {
     coin.disableBody(true, true);
-    this.score += 10;
-    this.scoreText.setText("Score: " + this.score);
+    if (player.playerId === 1) {
+      this.score_1 += 10;
+      this.scoreText_1.setText("Player 1: " + this.score_1);
+    } else if (player.playerId === 2) {
+      this.score_2 += 10;
+      this.scoreText_2.setText("Player 2: " + this.score_2);
+    }
 
     if (this.coins.countActive(true) === 0) {
       this.spawnCoins();
@@ -128,19 +180,34 @@ export class Game extends Scene {
     this.game.canvas.style.filter = on ? "grayscale(100%)" : "none";
   }
 
-  hitBomb() {
+  hitBomb(player, bomb) {
+    bomb.disableBody(true, true);
     this.toggleGrayscale(true);
     this.physics.pause();
 
-    let currentHighScore = this.game.registry.get("highScore") || 0;
-    if (this.score > currentHighScore) {
-      this.game.registry.set("highScore", this.score);
-    }
+    this.makePlayerBlink(player);
+
+    this.updateHighScores();
 
     setTimeout(() => {
       this.toggleGrayscale(false);
-      this.scene.start("GameOver", { score: this.score });
-    }, 2000);
+      this.scene.start("GameOver", {
+        scores: [this.score_1, this.score_2],
+        bomber: player.playerId,
+      });
+    }, 3000);
+  }
+
+  makePlayerBlink(player) {
+    let blinkCount = 0;
+    let blinkInterval = setInterval(() => {
+      player.setVisible(!player.visible);
+      blinkCount++;
+      if (blinkCount > 10) {
+        clearInterval(blinkInterval);
+        player.setVisible(true);
+      }
+    }, 250);
   }
 
   spawnBombs() {
@@ -188,6 +255,28 @@ export class Game extends Scene {
   checkForCoinRespawn() {
     if (this.coins.countActive(true) === 0) {
       this.spawnCoins();
+    }
+  }
+
+  intersectCoin(player) {
+    this.physics.add.overlap(player, this.coins, this.collectCoin, null, this);
+  }
+
+  intersectBomb(player) {
+    this.physics.add.collider(player, this.bombs, this.hitBomb, null, this);
+  }
+
+  updateHighScores() {
+    let highScoreKey1 = "highScore_1";
+    let currentHighScore1 = this.game.registry.get(highScoreKey1) || 0;
+    if (this.score_1 > currentHighScore1) {
+      this.game.registry.set(highScoreKey1, this.score_1);
+    }
+
+    let highScoreKey2 = "highScore_2";
+    let currentHighScore2 = this.game.registry.get(highScoreKey2) || 0;
+    if (this.score_2 > currentHighScore2) {
+      this.game.registry.set(highScoreKey2, this.score_2);
     }
   }
 }

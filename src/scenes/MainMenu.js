@@ -5,6 +5,10 @@ export class MainMenu extends Scene {
     super("MainMenu");
   }
 
+  init(data) {
+    this.game.registry.set("showOverlay", data ? data.showOverlay : true);
+  }
+
   create() {
     const { width, height } = this.sys.game.config;
     const showOverlay = this.game.registry.get("showOverlay");
@@ -12,13 +16,34 @@ export class MainMenu extends Scene {
     const background = this.add.image(width / 2, height / 2, "background");
     background.setDisplaySize(width, height);
 
-    const highScore = this.game.registry.get("highScore") || 0;
+    const highScore1 = this.game.registry.get("highScore_1") || 0;
+    const highScore2 = this.game.registry.get("highScore_2") || 0;
 
-    const highScoreText = this.add.text(16, 16, `High Score: ${highScore}`, {
-      fontSize: 32,
-      color: "#ffffff",
-      align: "left",
-    });
+    const highScoreText1 = this.add.text(
+      16,
+      16,
+      `Player 1 High Score: ${highScore1}`,
+      {
+        fontSize: 32,
+        color: "#ffffff",
+        align: "left",
+        backgroundColor: "#000000",
+        padding: 10,
+      },
+    );
+
+    const highScoreText2 = this.add.text(
+      16,
+      highScoreText1.height + 32,
+      `Player 2 High Score: ${highScore2}`,
+      {
+        fontSize: 32,
+        color: "#ffffff",
+        align: "left",
+        backgroundColor: "#000000",
+        padding: 10,
+      },
+    );
 
     const playText = this.add
       .text(width / 2, height / 2, "Play", {
@@ -39,7 +64,12 @@ export class MainMenu extends Scene {
       .text(
         width / 2,
         height / 2 - 100,
-        "Welcome to Bun's Road to Riches!\n\nUse the arrow keys to move Bun around and collect coins.\n\nAvoid the bombs!\n\nGood luck!",
+        "Welcome to Bun's Road to Riches!\n\n" +
+          "In this thrilling two-player game, join the Buns in their quest for riches. " +
+          "Navigate through treacherous fields filled with gold coins and dangerous bombs. " +
+          "Use the arrow keys for Bun and W, A, S, D for Pink Bun to move around.\n\n" +
+          "Who will collect the most coins and avoid the bombs to become the ultimate coin collector?\n\n" +
+          "Ready? Set. Collect!",
         {
           fontSize: 24,
           color: "#ffffff",
@@ -64,14 +94,10 @@ export class MainMenu extends Scene {
       .setOrigin(0.5)
       .setInteractive();
 
-    if (showOverlay === false) {
+    if (this.game.registry.get("showOverlay") === false) {
       modal.setVisible(false);
       infoText.setVisible(false);
       closeButton.setVisible(false);
-    } else {
-      modal.setVisible(true);
-      infoText.setVisible(true);
-      closeButton.setVisible(true);
     }
 
     closeButton.on("pointerdown", () => {
